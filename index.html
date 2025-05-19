@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Speech Recognition Chat</title>
+    <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+  />
+  
+<style>
+  body {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #f1f1f1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+    margin: 0;
+  }
+
+  #chat-log {
+    background: rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 700px;
+    height: 350px;
+    overflow-y: auto;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.7);
+    margin-bottom: 15px;
+  }
+
+  .message {
+    padding: 10px 15px;
+    margin-bottom: 10px;
+    border-radius: 15px;
+    max-width: 80%;
+    word-wrap: break-word;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    font-size: 1rem;
+    line-height: 1.3;
+    opacity: 0;
+    animation: fadeInUp 0.5s forwards;
+  }
+
+  .message.user {
+    background: #4caf50;
+    align-self: flex-end;
+    color: white;
+  }
+
+  .message.bot {
+    background: #3a3a5e;
+    align-self: flex-start;
+    color: #ddd;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  #question,
+  #context,
+  #long_answer {
+    width: 90%;
+    max-width: 700px;
+    padding: 10px 15px;
+    border-radius: 12px;
+    border: none;
+    margin-bottom: 15px;
+    font-size: 1rem;
+    font-family: inherit;
+    box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    resize: vertical;
+    background: rgba(255,255,255,0.1);
+    color: white;
+  }
+
+  #context, #long_answer {
+    min-height: 120px; /* box più grandi */
+    font-size: 1rem;
+    line-height: 1.4;
+  }
+
+  #question {
+    min-height: 40px;
+  }
+
+  #controls {
+    width: 90%;
+    max-width: 700px;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  button {
+    padding: 12px 20px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-radius: 30px;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    user-select: none;
+  }
+
+  button i {
+    font-size: 1.3rem;
+    transition: all 0.3s ease;
+  }
+
+  #record-btn {
+    background: #e94e77;
+    color: white;
+    box-shadow: 0 0 15px #e94e77;
+  }
+
+  #record-btn.recording i.fa-microphone {
+    color: #ff6f91;
+    animation: pulseMic 1.5s infinite;
+    transform-origin: center center;
+  }
+
+  @keyframes pulseMic {
+    0%, 100% {
+      transform: scale(1);
+      color: #e94e77;
+      filter: drop-shadow(0 0 5px #e94e77);
+    }
+    50% {
+      transform: scale(1.2);
+      color: #ff6f91;
+      filter: drop-shadow(0 0 15px #ff6f91);
+    }
+  }
+
+  #send {
+    background: #4caf50;
+    color: white;
+    box-shadow: 0 0 15px #4caf50;
+  }
+
+  #send:active i.fa-paper-plane {
+    transform: translateX(5px) rotate(15deg);
+    color: #1b5e20;
+    filter: drop-shadow(0 0 5px #1b5e20);
+  }
+
+</style>
+  </head>
+  <body>
+
+    <h2>Chatbot PubMedQA</h2>
+    
+    <label for="question">Please insert your question or press 'Recording question':</label><br>
+    <input type="text" id="question" size="80"><br>
+    <button id="record-btn">Recording question</button><br><br>
+    
+    <label for="context">Insert the abstract of the paper:</label><br>
+    <textarea id="context" rows="5" cols="80"></textarea><br>
+    
+    <label for="long_answer"> Insert the conclusion of the paper:</label><br>
+    <textarea id="long_answer" rows="5" cols="80"></textarea><br>
+    
+    <button id="send" onclick="sendQuestion()">Send</button><br><br>
+    
+    <p id="status"></p>
+    <p id="answer"></p>
+    <button id="read-answer-btn" onclick="readAnswer()" style="display:none;">🔊 Read Answer</button>
+    
+    <script>
+      const recordBtn = document.getElementById("record-btn");
+      const status = document.getElementById("status");
+      const questionInput = document.getElementById("question");
+      const answerElem = document.getElementById("answer");
+      const readBtn = document.getElementById("read-answer-btn");
+    
+      let recognition;
+      let isRecording = false;
+    
+      if (!('webkitSpeechRecognition' in window)) {
+        status.innerText = "Il riconoscimento vocale non è supportato da questo browser.";
+        recordBtn.disabled = true;
+      } else {
+        recognition = new webkitSpeechRecognition();
+        recognition.lang = 'en-US'; 
+        recognition.continuous = false;
+        recognition.interimResults = false;
+    
+        recognition.onstart = () => {
+          status.innerText = "Recording...";
+          recordBtn.innerText = "🎙️ Stop recording";
+          isRecording = true;
+        };
+    
+        recognition.onend = () => {
+          status.innerText = "End of the recording.";
+          recordBtn.innerText = "Recording question";
+          isRecording = false;
+        };
+    
+        recognition.onresult = (event) => {
+          const transcript = event.results[0][0].transcript;
+          questionInput.value = transcript;
+          status.innerText = "Trascrizione: " + transcript;
+        };
+    
+        recognition.onerror = (event) => {
+          status.innerText = 'Errore nel riconoscimento vocale: ' + event.error;
+          isRecording = false;
+          recordBtn.innerText = "Recording question";
+        };
+    
+        recordBtn.onclick = () => {
+          if (isRecording) {
+            recognition.stop();
+          } else {
+            recognition.start();
+          }
+        };
+      }
+    
+      async function sendQuestion() {
+        const question = questionInput.value;
+        const context = document.getElementById("context").value;
+        const long_answer = document.getElementById("long_answer").value;
+    
+        status.innerText = "Processing...";
+        answerElem.innerText = "";
+        readBtn.style.display = "none";
+    
+        try {
+          const response = await fetch(" https://6602-34-148-66-11.ngrok-free.app/chat", { // Sostituisci NGROK_PUBLIC_URL
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              question: question,
+              context: context,
+              long_answer: long_answer
+            })
+          });
+    
+          if (!response.ok) throw new Error("Errore nella risposta dal server");
+    
+          const data = await response.json();
+          answerElem.innerText = "Your answer: " + data.answer;
+          status.innerText = "Question answered successfully!";
+          readBtn.style.display = "inline"; // Show the read button
+          // Uncomment the next line if you want to read the answer automatically
+          // readAnswer();
+        } catch (error) {
+          status.innerText = "Errore: " + error.message;
+        }
+      }
+    
+      function readAnswer() {
+        const text = answerElem.innerText;
+        if ('speechSynthesis' in window) {
+          window.speechSynthesis.cancel(); // Stop previous speeches
+          const utterance = new SpeechSynthesisUtterance(text);
+          utterance.lang = "en-US"; // Change this if you want a different language
+          window.speechSynthesis.speak(utterance);
+        } else {
+          alert("Sorry, your browser does not support speech synthesis.");
+        }
+      }
+    </script>
+    
+    </body>
+</html>
