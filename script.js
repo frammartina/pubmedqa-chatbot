@@ -90,7 +90,7 @@ async function fetchResponse(question) {
   const longAnswer = "Fornisci la risposta lunga dinamica o fissa qui";
 
   try {
-    const response = await fetch(" https://6602-34-148-66-11.ngrok-free.app/chat", {
+    const response = await fetch(" https://f9c1-34-148-66-11.ngrok-free.app/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
