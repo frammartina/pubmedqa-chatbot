@@ -4,6 +4,16 @@ from pydantic import BaseModel
 import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from fastapi.middleware.cors import CORSMiddleware
+import os
+
+MODEL_PATH = "LSTM__0.9170.pt.pt"
+MODEL_URL = "https://drive.google.com/file/d/133F-sRp_mCGOo73t1ieSnbk5fSxPFENT/view?usp=drive_link"  
+
+if not os.path.exists(MODEL_PATH):
+    import gdown
+    print("Scaricamento dei pesi dal Google Drive...")
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+
 
 tokenizer = AutoTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.1", use_fast=False)
 model_name = "dmis-lab/biobert-base-cased-v1.1"
