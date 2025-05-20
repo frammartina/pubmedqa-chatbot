@@ -1,0 +1,7 @@
+gdown
+os
+fastapi
+uvicorn
+torch
+transformers
+
