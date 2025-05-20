@@ -1,5 +1,4 @@
 gdown
-os
 fastapi
 uvicorn
 torch
