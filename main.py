@@ -19,7 +19,7 @@ tokenizer = AutoTokenizer.from_pretrained("dmis-lab/biobert-base-cased-v1.1", us
 model_name = "dmis-lab/biobert-base-cased-v1.1"
 model = AutoModelForSequenceClassification.from_pretrained(model_name, num_labels=2)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model.load_state_dict(torch.load("LSTM__0.9170.pt.pt", map_location=device))
+model.load_state_dict(torch.load(MODEL_PATH, map_location=device))
 model.to(device)
 model.eval()
 
